@@ -80,7 +80,7 @@ def main(args=None):
     repo.heads.master.set_tracking_branch(origin.refs.master)
 
     #Check format of version_number
-    projectVersion_pattern = re.compile('v([\d.]+)')
+    projectVersion_pattern = re.compile(r'v([\d.]+)')
     version_string = re.search(projectVersion_pattern, args.version_string).group(1)
     if not version_string:
         print('Error, version string does not match format "vX.X.X"')
