@@ -1,6 +1,6 @@
 import argparse
 import shutil
-import os, re, fnmatch, getpass, stat
+import os, re, fnmatch, getpass, stat, os.path
 import logging
 import uuid
 from lxml import etree
@@ -42,7 +42,14 @@ def parse_args():
                             help='Version number must be vMAJOR.MINOR.BUGFIX')
     parser.add_argument('repo_url', type=str,
                         help='URL or path to the repo (for cloning)')
+    parser.add_argument('--plcproj', default='',
+                        help=('If multiple PLC projects in the repo, specify '
+                              'which one to set the version number on.'))
+    parser.add_argument('--dry-run', action='store_true',
+                        help=('Run without pushing back to the repo and '
+                              'without cleaning up the checkout directory.'))
     return parser.parse_args()
+
 
 def find(pattern, path):
     result = []
@@ -95,13 +102,24 @@ def main(args=None):
     if not len(plcproj_path):
         print('Error, did not find .plcproj file.')
         exit(1)
+    elif args.plcproj:
+        for i, proj in enumerate(plcproj_path):
+            if args.plcproj == os.path.split(proj)[1].split('.')[0]:
+                plcproj_file = plcproj_path[i]
+                break
+        else:
+            print(('Error, did not find specified file '
+                   '{}.plcproj'.format(args.plcproj)))
+            exit(1)
     elif len(plcproj_path) > 1:
         print('Error, found multiple .plcproj files.')
         exit(1)
+    else:
+        plcproj_file = plcproj_path[0]
 
     #Getting our xml structure to work with
     logging.info('Parsing plcproj')
-    plcproj_tree = etree.parse(plcproj_path[0])
+    plcproj_tree = etree.parse(plcproj_file)
 
     plcproj_root = plcproj_tree.getroot()
 
@@ -177,7 +195,7 @@ def main(args=None):
     #Add this file to the project by adding a Version/ folder and Global_Version.TcGVL file and linking in the .tcproj
     #Creating file and folder
     logging.info('Writing Global_Version.TcGVL to file')
-    version_dir = os.path.join( os.path.dirname(plcproj_path[0]), 'Version' )
+    version_dir = os.path.join( os.path.dirname(plcproj_file), 'Version' )
     os.makedirs( version_dir, exist_ok=True )
     GV_TcGVL_file = os.path.join(version_dir, 'Global_Version.TcGVL')
     
@@ -203,13 +221,13 @@ def main(args=None):
 
     #Writing new plcproj to disk
     logging.info('Writing updated .plcproj to file')
-    plcproj_tree.write( plcproj_path[0], encoding='utf-8', xml_declaration=True)
+    plcproj_tree.write(plcproj_file, encoding='utf-8', xml_declaration=True)
     logging.info('.plc project has been updated')
 
     #Commit changes
     repoIndex = repo.index
     repoIndex.add([GV_TcGVL_file])
-    repoIndex.add([ plcproj_path[0] ])
+    repoIndex.add([plcproj_file])
     repoIndex.write()
     
     logging.info('Committing changes')
@@ -221,10 +239,10 @@ def main(args=None):
 
     #Push commit
     #--tags is not ideal, but since this is the only tag we're creating in this temp area, it should be safe
-    pushStatus = origin.push(tags=True)
-    logging.info('Push complete')
-
-    return pushStatus
+    if not args.dry_run:
+        pushStatus = origin.push(tags=True)
+        logging.info('Push complete')
+        return pushStatus
 
 
 if __name__ == "__main__":
@@ -234,5 +252,6 @@ if __name__ == "__main__":
     try:
         main(args)
     finally:
-        logging.info('Cleaning up')
-        shutil.rmtree(working_dir, onerror=remove_readonly)
+        if not args.dry_run:
+            logging.info('Cleaning up')
+            shutil.rmtree(working_dir, onerror=remove_readonly)
