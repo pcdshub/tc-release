@@ -27,7 +27,7 @@ GlobalVersion_TcGVL = '''\
 // This function has been automatically generated from the project information.
 VAR_GLOBAL CONSTANT
 	{attribute 'const_non_replaced'}
-	{attribute 'linkalways'
+	{attribute 'linkalways'}
 	stLibVersion_LCLS_General : ST_LibVersion := (iMajor := 0, iMinor := 1, iBuild := 4, iRevision := 0, sVersion := '0.1.4');
 END_VAR
 ]]></Declaration>
