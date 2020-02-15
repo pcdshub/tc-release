@@ -242,6 +242,7 @@ def main(args=None):
     if not args.dry_run:
         pushStatus = origin.push(tags=True)
         logging.info('Push complete')
+        repo.close()
         return pushStatus
 
 
