@@ -1,6 +1,6 @@
 #Intro
 
-https://confluence.slac.stanford.edu/display/PCDS/Automated+Tagging+for+TC+Projects
+https://confluence.slac.stanford.edu/display/PCDS/Automated+Tagging+for+TwinCAT+Projects
 
 #Building the exe
 1. Install pyinstaller and pywin32
