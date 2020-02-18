@@ -19,7 +19,7 @@ setup(
     include_package_data=True,
     entry_points={
         'console_scripts': [
-            'tc_release = tc_release.tc_release:main'
+            'tc-release = tc_release.tc_release:main'
         ]
     }
   )
