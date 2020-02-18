@@ -1,0 +1,30 @@
+{% set data = load_setup_py_data() %}
+
+package:
+  name: tc_release
+  version : {{ data.get('version') }}
+
+source:
+  path: ..
+
+build:
+  number: 0
+
+requirements:
+  build:
+    - python {{PY_VER}}*,>=3
+    - setuptools
+
+  run:
+    - python {{PY_VER}}*,>=3
+    - lxml
+    - GitPython
+
+test:
+  imports:
+    - tc_release
+
+about:
+  home: https://github.com/pcdshub/tc_release
+  license: SLAC Open License
+  summary: A TwinCAT project release tool
