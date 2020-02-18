@@ -3,6 +3,23 @@ Intro
 
 https://confluence.slac.stanford.edu/display/PCDS/Automated+Tagging+for+TwinCAT+Projects
 
+Installing
+==========
+
+```bash
+$ git clone https://github.com/pcdshub/tc_release
+$ cd tc_release
+$ pip install .
+```
+
+Running
+=======
+
+```bash
+$ tc-release
+usage: tc-release [-h] [--plcproj PLCPROJ] [--dry-run] VERSION NUMBER repo_url
+```
+
 Building the exe
 ================
 
@@ -14,5 +31,5 @@ Building the exe
 
 2. Build exe
     ```
-    pyinstaller --onefile tc_release.py
+    pyinstaller tc_release
     ```
