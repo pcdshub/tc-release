@@ -38,7 +38,7 @@ END_VAR
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Properly tags/version your TC project with GIT')
-    parser.add_argument('version_string', metavar='VERSION NUMBER', type=str, 
+    parser.add_argument('version_string', metavar='VERSION NUMBER', type=str,
                             help='Version number must be vMAJOR.MINOR.BUGFIX')
     parser.add_argument('repo_url', type=str,
                         help='URL or path to the repo (for cloning)')
@@ -66,7 +66,7 @@ def remove_readonly(func, path, _):
     func(path)
 
 
-def main(args=None):
+def _main(args=None):
     #Create a temp directory, and clone the repo, and check out master
 
     logging.info('Creating working directory: %s', working_dir)
@@ -92,7 +92,7 @@ def main(args=None):
     if not version_string:
         print('Error, version string does not match format "vX.X.X"')
         exit(1)
-    
+
     #Inject version_number into .tcproj
     #Find .tcproj
 
@@ -151,7 +151,7 @@ def main(args=None):
     GlobalVersion_TcGVL_root = etree.XML(GlobalVersion_TcGVL)
     GlobalVersion_TcGVL_tree = etree.ElementTree(element=GlobalVersion_TcGVL_root)
 
-    GlobalVersion_TcGVL_attributes = GlobalVersion_TcGVL_root.attrib        
+    GlobalVersion_TcGVL_attributes = GlobalVersion_TcGVL_root.attrib
 
     GlobalVersion_TcGVL_attributes['ProductVersion'] = TcPlcObject_PRODUCT_VERSION
     GlobalVersion_TcGVL_attributes['Version'] = TcPlcObject_VERSION
@@ -198,7 +198,7 @@ def main(args=None):
     version_dir = os.path.join( os.path.dirname(plcproj_file), 'Version' )
     os.makedirs( version_dir, exist_ok=True )
     GV_TcGVL_file = os.path.join(version_dir, 'Global_Version.TcGVL')
-    
+
     GlobalVersion_TcGVL_tree.write(GV_TcGVL_file, encoding='utf-8', xml_declaration=True)
     logging.info('File created successfully: %s', GV_TcGVL_file)
 
@@ -229,7 +229,7 @@ def main(args=None):
     repoIndex.add([GV_TcGVL_file])
     repoIndex.add([plcproj_file])
     repoIndex.write()
-    
+
     logging.info('Committing changes')
     commit_message = "Tagging version {version}".format(version=args.version_string)
     newCommit = repoIndex.commit(commit_message)
@@ -246,8 +246,7 @@ def main(args=None):
         return pushStatus
 
 
-if __name__ == "__main__":
-    
+def main():
     logging.basicConfig(level=logging.DEBUG)
     args = parse_args()
     try:
@@ -256,3 +255,7 @@ if __name__ == "__main__":
         if not args.dry_run:
             logging.info('Cleaning up')
             shutil.rmtree(working_dir, onerror=remove_readonly)
+
+
+if __name__ == "__main__":
+    main()
