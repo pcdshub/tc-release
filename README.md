@@ -1,7 +1,11 @@
 Intro
 =====
 
+https://confluence.slac.stanford.edu/display/PCDS/Releasing+Pytmc+TwinCAT+Project+IOCs
+
+and more specifically:
 https://confluence.slac.stanford.edu/display/PCDS/Automated+Tagging+for+TwinCAT+Projects
+
 
 Installing
 ==========
