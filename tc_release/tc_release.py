@@ -250,7 +250,7 @@ def main():
     logging.basicConfig(level=logging.DEBUG)
     args = parse_args()
     try:
-        main(args)
+        _main(args)
     finally:
         if not args.dry_run:
             logging.info('Cleaning up')
