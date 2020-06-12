@@ -232,7 +232,7 @@ def _main(args=None):
 
     logging.info('Committing changes')
     commit_message = "Tagging version {version}".format(version=args.version_string)
-    newCommit = repoIndex.commit(commit_message)
+    newCommit = repoIndex.commit(commit_message, skip_hooks=True)
 
     #Tag this commit
     repo.create_tag(args.version_string, ref='HEAD', message=commit_message)
