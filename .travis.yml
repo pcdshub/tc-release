@@ -1,0 +1,25 @@
+version: ~> 1.0
+
+env:
+  global:
+    # the package name but you can enable other flake8 options via this config
+    - PYTHON_LINT_OPTIONS="tc_release"
+    # The name of the conda package
+    - CONDA_PACKAGE="tc_release"
+    # The folder containing the conda recipe (meta.yaml)
+    - CONDA_RECIPE_FOLDER="conda-recipe"
+
+# Modified version of the standard, we just want to deploy the conda package
+language: python
+os: linux
+dist: xenial
+
+stages:
+  - build
+  - name: deploy
+    if: (branch = master OR tag IS present) AND type != pull_request
+
+import:
+  - pcdshub/pcds-ci-helpers:travis/shared_configs/anaconda-build.yml
+  - pcdshub/pcds-ci-helpers:travis/shared_configs/anaconda-upload.yml
+  - pcdshub/pcds-ci-helpers:travis/shared_configs/pypi-upload.yml
