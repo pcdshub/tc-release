@@ -186,7 +186,7 @@ def _main(args=None):
         iBuild = build,
         iRevision = revision,
         sVersion = version_string,
-        title = str(title_tag.text).replace(' ', '_')
+        title = str(title_tag.text).replace(' ', '_').replace('-', '_')
     )
 
     declaration.text = etree.CDATA( pattern.sub(replacement_string, declaration_text) )#Note, using the declaration.text not _ to write it back
