@@ -1,5 +1,7 @@
 import argparse
+import contextlib
 import shutil
+import subprocess
 import os, re, fnmatch, getpass, stat, os.path
 import logging
 import uuid
@@ -45,6 +47,8 @@ def parse_args():
     parser.add_argument('--plcproj', default='',
                         help=('If multiple PLC projects in the repo, specify '
                               'which one to set the version number on.'))
+    parser.add_argument('--deploy', action='store_true',
+                        help=('Also make and deploy the IOC if applicable.'))
     parser.add_argument('--dry-run', action='store_true',
                         help=('Run without pushing back to the repo and '
                               'without cleaning up the checkout directory.'))
@@ -64,6 +68,64 @@ def remove_readonly(func, path, _):
     "Clear the readonly bit and reattempt the removal"
     os.chmod(path, stat.S_IWRITE)
     func(path)
+
+
+@contextlib.contextmanager
+def pushd(new_dir):
+    previous_dir = os.getcwd()
+    os.chdir(new_dir)
+    yield
+    os.chdir(previous_dir)
+
+
+def deploy(repo_url, tag, directory):
+    """
+    Clone a repo to a specific directory at a specific tag, then build the IOC
+
+    This will find the highest-level Makefile in the directory tree, then
+    shell out to call 'make'.
+
+    If more than one such file exists, we will make all of them.
+
+    Parameters
+    ----------
+    repo_url : str
+        The repo specification to clone from.
+        For example: git@github.com:pcdshub/tc_release.git
+
+    tag : str
+        The tag to deploy, e.g. v1.0.0
+
+    directory : str
+        The parent directory to deploy to. We will automatically create a
+        subdirectory with the name of the tag.
+        For example: directory=/cds/group/epics/ioc/kfe/my_plc
+        would deploy to /cds/group/epics/ioc/kfe/my_plc/v1.0.0
+    """
+    # Clone the repo
+    deploy_dir = os.path.join(directory, tag)
+    clone_from(repo_url, deploy_dir, depth=1, branch=tag)
+
+    walker = os.walk(deploy_dir)
+    make_dirs = []
+
+    # Find the first Makefile in every branch of the directory tree
+    for dirpath, dirnames, filenames in walker:
+        if 'Makefile' in filenames:
+            make_dirs.append(dirpath)
+            # Stop searching this branch if we found a Makefile
+            dirnames.clear()
+            continue
+        # Skip the version control directory
+        try:
+            dirnames.remove('.git')
+        except ValueError:
+            pass
+
+    # Make all the makefiles
+    for make_dir in make_dirs:
+        with pushd(make_dir):
+            subprocess.run('make')
 
 
 def _main(args=None):
