@@ -37,20 +37,9 @@ from git import Repo  # isort:skip
 
 working_dir = os.path.join(os.getcwd(), dirname)
 
-GlobalVersion_TcGVL = '''
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4022.10">
-  <GVL Name="Global_Version" Id="{c1e6c8db-11ef-4bd5-8510-07e605ee5d06}">
-    <Declaration><![CDATA[{attribute 'TcGenerated'}
-// This function has been automatically generated from the project information.
-VAR_GLOBAL CONSTANT
-    {attribute 'const_non_replaced'}
-    {attribute 'linkalways'}
-    stLibVersion_LCLS_General : ST_LibVersion := (iMajor := 0, iMinor := 1, iBuild := 4, iRevision := 0, sVersion := '0.1.4');
-END_VAR
-]]></Declaration>
-  </GVL>
-</TcPlcObject>
-'''
+template_file = os.path.join(os.dirname(__file__), 'tcgvl.txt')
+with open(template_file, 'r') as fd:
+    GlobalVersion_TcGVL = fd.read()
 
 
 def parse_args():
