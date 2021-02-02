@@ -1,34 +1,43 @@
 import argparse
 import contextlib
-import shutil
-import subprocess
-import os, re, fnmatch, getpass, stat, os.path
-import sys
+import fnmatch
+import getpass
 import logging
+import os
+import os.path
+import re
+import shutil
+import stat
+import subprocess
+import sys
 import uuid
+
 from lxml import etree
 
-username = getpass.getuser()
-local_git_install = 'C:\\Users\\{user}\\AppData\\Local\\Programs\\Git\\'.format(
-        user = username
-    )
-
-if os.path.exists(local_git_install):
-    os.environ['GIT_PYTHON_GIT_EXECUTABLE'] = local_git_install+'mingw64\\bin\\git.exe'
-    os.environ['GIT_SSH'] = local_git_install+'usr\\bin\\ssh.exe'
-from git import Repo
-
-# Working directory
+# Platform-specific setup
 if 'win' in sys.platform:
+    # Set up git env variables
+    username = getpass.getuser()
+    git_app_data = 'C:\\Users\\{user}\\AppData\\Local\\Programs\\Git\\'
+    local_git_install = git_app_data.format(user=username)
+
+    if os.path.exists(local_git_install):
+        os.environ['GIT_PYTHON_GIT_EXECUTABLE'] = (local_git_install +
+                                                   'mingw64\\bin\\git.exe')
+        os.environ['GIT_SSH'] = local_git_install + 'usr\\bin\\ssh.exe'
+
     # Follow windows standard for working directory
     dirname = '~tc-release-tmp'
 else:
     # Follow linux standard for working directory
     dirname = '.tc-release-tmp'
 
+# Late import, needs to be after the above on windows
+from git import Repo  # isort:skip
+
 working_dir = os.path.join(os.getcwd(), dirname)
 
-GlobalVersion_TcGVL = '''\
+GlobalVersion_TcGVL = '''
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4022.10">
   <GVL Name="Global_Version" Id="{c1e6c8db-11ef-4bd5-8510-07e605ee5d06}">
     <Declaration><![CDATA[{attribute 'TcGenerated'}
@@ -45,9 +54,10 @@ END_VAR
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Properly tags/version your TC project with GIT')
+    parser = argparse.ArgumentParser(description=('Properly tags/version '
+                                                  'your TC project with GIT'))
     parser.add_argument('version_string', metavar='VERSION NUMBER', type=str,
-                            help='Version number must be vMAJOR.MINOR.BUGFIX')
+                        help='Version number must be vMAJOR.MINOR.BUGFIX')
     parser.add_argument('repo_url', type=str,
                         help='URL or path to the repo (for cloning)')
     parser.add_argument('--plcproj', default='',
@@ -69,7 +79,8 @@ def find(pattern, path):
                 result.append(os.path.join(root, name))
     return result
 
-#Workaround for Windows file lock issues
+
+# Workaround for Windows file lock issues
 def remove_readonly(func, path, _):
     "Clear the readonly bit and reattempt the removal"
     os.chmod(path, stat.S_IWRITE)
@@ -164,13 +175,15 @@ def deploy(repo_url, tag, directory):
 
 
 def _main(args=None):
-    #Create a temp directory, and clone the repo, and check out master
+    # Create a temp directory, and clone the repo, and check out master
 
     logging.info('Creating working directory: %s', working_dir)
-    logging.info('Initializing bare git repo, establishing remote, and checking out master')
+    logging.info('Initializing bare git repo, establishing remote, and '
+                 'checking out master')
     repo = Repo.init(working_dir)
     logging.info('Adding remote')
-    logging.debug('Working directory: %s, Repo: %s' % (working_dir, args.repo_url) )
+    logging.debug('Working directory: %s, Repo: %s',
+                  working_dir, args.repo_url)
     origin = repo.create_remote('origin', str(args.repo_url))
 
     assert origin.exists()
@@ -183,15 +196,16 @@ def _main(args=None):
 
     repo.heads.master.set_tracking_branch(origin.refs.master)
 
-    #Check format of version_number
+    # Check format of version_number
     projectVersion_pattern = re.compile(r'v([\d.]+)')
-    version_string = re.search(projectVersion_pattern, args.version_string).group(1)
+    version_string = re.search(projectVersion_pattern,
+                               args.version_string).group(1)
     if not version_string:
         print('Error, version string does not match format "vX.X.X"')
         exit(1)
 
-    #Inject version_number into .tcproj
-    #Find .tcproj
+    # Inject version_number into .tcproj
+    # Find .tcproj
 
     logging.info('Looking for .plcproj')
     plcproj_path = find('*.plcproj', working_dir)
@@ -214,7 +228,7 @@ def _main(args=None):
     else:
         plcproj_file = plcproj_path[0]
 
-    #Getting our xml structure to work with
+    # Getting our xml structure to work with
     logging.info('Parsing plcproj')
     plcproj_tree = etree.parse(plcproj_file)
 
@@ -222,20 +236,24 @@ def _main(args=None):
 
     nsmap = plcproj_root.nsmap
 
-    #Getting the ProjectVersion, Company, Author and Title tags
+    # Getting the ProjectVersion, Company, Author and Title tags
     projectVersion_tag = plcproj_root.find('.//ProjectVersion', nsmap)
-    company_tag = plcproj_root.find('.//Company', nsmap)
-    author_tag = plcproj_root.find('.//Author', nsmap)
+    # company_tag and author_tag are currently unused
+    # company_tag = plcproj_root.find('.//Company', nsmap)
+    # author_tag = plcproj_root.find('.//Author', nsmap)
     title_tag = plcproj_root.find('.//Title', nsmap)
 
     logging.info('Updating plcproj with version number: %s', version_string)
-    #Adding version string to plcproj
+    # Adding version string to plcproj
     projectVersion_tag.text = version_string
 
-    #To make this verson number available in the PLC runtime, we must add the Version/Global_Version.TcGVL to the project
-    #Whether one exists or not, doesn't matter. We always just create one.
-    #To start, we need the TC version of the project and the current TcPlcObject version.
-    #We can get this info for scanning for a .TcPOU in the project files (there has to be at least one), and extracting these tags
+    # To make this verson number available in the PLC runtime,
+    # we must add the Version/Global_Version.TcGVL to the project
+    # Whether one exists or not, doesn't matter. We always just create one.
+    # To start, we need the TC version of the project
+    # and the current TcPlcObject version.
+    # We can get this info for scanning for a .TcPOU in the project files
+    # (there has to be at least one), and extracting these tags
 
     logging.info('Creating Global_Version.TcGVL')
     pouFiles = find('*.TcPOU', working_dir)
@@ -246,14 +264,16 @@ def _main(args=None):
     TcPlcObject_VERSION = pouRoot.get('Version')
 
     GlobalVersion_TcGVL_root = etree.XML(GlobalVersion_TcGVL)
-    GlobalVersion_TcGVL_tree = etree.ElementTree(element=GlobalVersion_TcGVL_root)
+    GlobalVersion_TcGVL_tree = etree.ElementTree(
+        element=GlobalVersion_TcGVL_root)
 
     GlobalVersion_TcGVL_attributes = GlobalVersion_TcGVL_root.attrib
 
-    GlobalVersion_TcGVL_attributes['ProductVersion'] = TcPlcObject_PRODUCT_VERSION
+    GlobalVersion_TcGVL_attributes['ProductVersion'] = (
+        TcPlcObject_PRODUCT_VERSION)
     GlobalVersion_TcGVL_attributes['Version'] = TcPlcObject_VERSION
 
-    #We should also change the GUID, just to be nice.
+    # We should also change the GUID, just to be nice.
     gvl_attrib = GlobalVersion_TcGVL_root.find('.//GVL').attrib
 
     try:
@@ -262,7 +282,7 @@ def _main(args=None):
         print('Error, could not find Id attribute in GVL tag...')
         exit(1)
 
-    #Now we modify the title and version numbers
+    # Now we modify the title and version numbers
     declaration = GlobalVersion_TcGVL_root.find('.//Declaration')
     declaration_text = declaration.text
 
@@ -270,72 +290,88 @@ def _main(args=None):
     major = split_version_string[0]
     minor = split_version_string[1]
     build = split_version_string[2]
-    if len(split_version_string)>3:
+    if len(split_version_string) > 3:
         revision = split_version_string[4]
     else:
         revision = '0'
 
-
-    pattern = re.compile(r"stLibVersion_(?P<title>.+)\s?:\s?ST_LibVersion.+iMajor.+(?P<major>\d+).+iMinor.+(?P<minor>\d+).+iBuild.+(?P<build>\d+).*iRevision.+(?P<revision>\d+).+sVersion.+'(?P<version_string>.+)'.+;")
-    replacement_string = "stLibVersion_{title} : ST_LibVersion := (iMajor := {iMajor}, iMinor := {iMinor}, iBuild := {iBuild}, iRevision := {iRevision}, sVersion := '{sVersion}');".format(
-        iMajor = major,
-        iMinor = minor,
-        iBuild = build,
-        iRevision = revision,
-        sVersion = version_string,
-        title = str(title_tag.text).replace(' ', '_').replace('-', '_')
+    pattern = re.compile(r"stLibVersion_(?P<title>.+)\s?:\s?ST_LibVersion.+"
+                         r"iMajor.+(?P<major>\d+).+iMinor.+(?P<minor>\d+).+"
+                         r"iBuild.+(?P<build>\d+).*iRevision.+"
+                         r"(?P<revision>\d+).+sVersion.+"
+                         r"'(?P<version_string>.+)'.+;")
+    fmt = ("stLibVersion_{title} : ST_LibVersion := "
+           "(iMajor := {iMajor}, iMinor := {iMinor}, "
+           "iBuild := {iBuild}, iRevision := {iRevision}, "
+           "sVersion := '{sVersion}');")
+    replacement_string = fmt.format(
+        iMajor=major,
+        iMinor=minor,
+        iBuild=build,
+        iRevision=revision,
+        sVersion=version_string,
+        title=str(title_tag.text).replace(' ', '_').replace('-', '_')
     )
 
-    declaration.text = etree.CDATA( pattern.sub(replacement_string, declaration_text) )#Note, using the declaration.text not _ to write it back
-    #Also note the use of the CDATA wrapper, this is stripped by .text, so we need to restore it.
+    declaration.text = etree.CDATA(pattern.sub(replacement_string,
+                                               declaration_text))
+    # Note, using the declaration.text not _ to write it back
+    # Also note the use of the CDATA wrapper, this is stripped by .text,
+    # so we need to restore it.
 
-    #Add this file to the project by adding a Version/ folder and Global_Version.TcGVL file and linking in the .tcproj
-    #Creating file and folder
+    # Add this file to the project by adding a Version/ folder and
+    # Global_Version.TcGVL file and linking in the .tcproj
+
+    # Creating file and folder
     logging.info('Writing Global_Version.TcGVL to file')
-    version_dir = os.path.join( os.path.dirname(plcproj_file), 'Version' )
-    os.makedirs( version_dir, exist_ok=True )
+    version_dir = os.path.join(os.path.dirname(plcproj_file), 'Version')
+    os.makedirs(version_dir, exist_ok=True)
     GV_TcGVL_file = os.path.join(version_dir, 'Global_Version.TcGVL')
 
-    GlobalVersion_TcGVL_tree.write(GV_TcGVL_file, encoding='utf-8', xml_declaration=True)
+    GlobalVersion_TcGVL_tree.write(GV_TcGVL_file, encoding='utf-8',
+                                   xml_declaration=True)
     logging.info('File created successfully: %s', GV_TcGVL_file)
 
-    #Linking in the .plcproj
+    # Linking in the .plcproj
     logging.info('Linking Global_Version.TcGVL into plcproj')
 
-    #Check if Version folder is already linked, if not add it
+    # Check if Version folder is already linked, if not add it
     if not plcproj_root.find(".//ItemGroup/Folder[@Include='Version']", nsmap):
         folder = plcproj_root.find('.//ItemGroup/Folder', nsmap)
         folder.addnext(etree.XML('<Folder Include="Version" />'))
 
-    #Check if Compile Include if not add it (it better already be there)
-    if not plcproj_root.find('.//ItemGroup/Compile[@Include="Version\Global_Version.TcGVL"]', nsmap):
+    # Check if Compile Include if not add it (it better already be there)
+    ver_comp = r'.//ItemGroup/Compile[@Include="Version\Global_Version.TcGVL"]'
+    if not plcproj_root.find(ver_comp, nsmap):
         compile_include = plcproj_root.find('.//ItemGroup/Compile', nsmap)
-        compile_include.addnext( etree.XML('''\
+        compile_include.addnext(etree.XML(r'''
         <Compile Include="Version\Global_Version.TcGVL">
             <SubType>Code</SubType>
         </Compile>
         '''))
 
-    #Writing new plcproj to disk
+    # Writing new plcproj to disk
     logging.info('Writing updated .plcproj to file')
     plcproj_tree.write(plcproj_file, encoding='utf-8', xml_declaration=True)
     logging.info('.plc project has been updated')
 
-    #Commit changes
+    # Commit changes
     repoIndex = repo.index
     repoIndex.add([GV_TcGVL_file])
     repoIndex.add([plcproj_file])
     repoIndex.write()
 
     logging.info('Committing changes')
-    commit_message = "Tagging version {version}".format(version=args.version_string)
-    newCommit = repoIndex.commit(commit_message, skip_hooks=True)
+    commit_message = "Tagging version {version}".format(
+        version=args.version_string)
+    repoIndex.commit(commit_message, skip_hooks=True)
 
-    #Tag this commit
+    # Tag this commit
     repo.create_tag(args.version_string, ref='HEAD', message=commit_message)
 
-    #Push commit
-    #--tags is not ideal, but since this is the only tag we're creating in this temp area, it should be safe
+    # Push commit
+    # --tags is not ideal, but since this is the only tag we're creating
+    # in this temp area, it should be safe
     if not args.dry_run:
         pushStatus = origin.push(tags=True)
         logging.info('Push complete')
