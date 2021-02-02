@@ -78,6 +78,48 @@ def pushd(new_dir):
     os.chdir(previous_dir)
 
 
+def find_makefiles(directory):
+    """
+    Find the subdirectories that contain Makefiles.
+
+    This will do a depth-first walk of the directory tree, accumulating a
+    directory name whenever a file named "Makefile" is found, and pruning the
+    search path at these directories to avoid double-counting any
+    sub-Makefiles.
+
+    An assumption is made that a Makefile will, in itself, trigger any
+    Makefiles in subdirectories from that point in the directory tree.
+
+    Parameters
+    ----------
+    directory : str
+        The parent directory to use as the starting point for the depth-first
+        search.
+
+    Returns
+    -------
+    make_dirs : list of str
+        The highest-level directories that contain files named "Makefile".
+    """
+    walker = os.walk(directory)
+    make_dirs = []
+
+    # Find the first Makefile in every branch of the directory tree
+    for dirpath, dirnames, filenames in walker:
+        if 'Makefile' in filenames:
+            make_dirs.append(dirpath)
+            # Stop searching this branch if we found a Makefile
+            dirnames.clear()
+            continue
+        # Skip the version control directory
+        try:
+            dirnames.remove('.git')
+        except ValueError:
+            pass
+
+    return make_dirs
+
+
 def deploy(repo_url, tag, directory):
     """
     Clone a repo to a specific directory at a specific tag, then build the IOC
@@ -106,21 +148,8 @@ def deploy(repo_url, tag, directory):
     deploy_dir = os.path.join(directory, tag)
     Repo.clone_from(repo_url, deploy_dir, depth=1, branch=tag)
 
-    walker = os.walk(deploy_dir)
-    make_dirs = []
-
-    # Find the first Makefile in every branch of the directory tree
-    for dirpath, dirnames, filenames in walker:
-        if 'Makefile' in filenames:
-            make_dirs.append(dirpath)
-            # Stop searching this branch if we found a Makefile
-            dirnames.clear()
-            continue
-        # Skip the version control directory
-        try:
-            dirnames.remove('.git')
-        except ValueError:
-            pass
+    # Find the makefiles
+    make_dirs = find_makefiles(deploy_dir)
 
     # Make all the makefiles
     for make_dir in make_dirs:
