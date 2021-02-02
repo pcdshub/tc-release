@@ -175,7 +175,8 @@ def _main(args=None):
                   working_dir, args.repo_url)
     origin = repo.create_remote('origin', str(args.repo_url))
 
-    assert origin.exists()
+    if not origin.exists():
+        raise RuntimeError('Repo URL does not exist!')
 
     origin.fetch()
 
