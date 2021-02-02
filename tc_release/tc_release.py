@@ -104,7 +104,7 @@ def deploy(repo_url, tag, directory):
     """
     # Clone the repo
     deploy_dir = os.path.join(directory, tag)
-    clone_from(repo_url, deploy_dir, depth=1, branch=tag)
+    Repo.clone_from(repo_url, deploy_dir, depth=1, branch=tag)
 
     walker = os.walk(deploy_dir)
     make_dirs = []
