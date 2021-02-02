@@ -3,6 +3,7 @@ import contextlib
 import shutil
 import subprocess
 import os, re, fnmatch, getpass, stat, os.path
+import sys
 import logging
 import uuid
 from lxml import etree
@@ -17,10 +18,15 @@ if os.path.exists(local_git_install):
     os.environ['GIT_SSH'] = local_git_install+'usr\\bin\\ssh.exe'
 from git import Repo
 
+# Working directory
+if 'win' in sys.platform:
+    # Follow windows standard for working directory
+    dirname = '~tc-release-tmp'
+else:
+    # Follow linux standard for working directory
+    dirname = '.tc-release-tmp'
 
-#Working directory
-dirname = '~tc-release-tmp'
-working_dir =os.path.join(os.getcwd(), dirname)
+working_dir = os.path.join(os.getcwd(), dirname)
 
 GlobalVersion_TcGVL = '''\
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4022.10">
