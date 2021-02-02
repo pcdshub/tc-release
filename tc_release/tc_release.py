@@ -163,7 +163,7 @@ def deploy(repo_url, tag, directory):
             subprocess.run('make')
 
 
-def _main(args=None):
+def make_release(args):
     # Create a temp directory, and clone the repo, and check out master
 
     logging.info('Creating working directory: %s', working_dir)
@@ -367,6 +367,10 @@ def _main(args=None):
         logging.info('Push complete')
         repo.close()
         return pushStatus
+
+
+def _main(args):
+    return make_release(args)
 
 
 def main():
