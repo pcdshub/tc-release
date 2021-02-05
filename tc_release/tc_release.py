@@ -37,7 +37,7 @@ from git import Repo  # isort:skip
 
 working_dir = os.path.join(os.getcwd(), dirname)
 
-template_file = os.path.join(os.dirname(__file__), 'tcgvl.txt')
+template_file = os.path.join(os.path.dirname(__file__), 'tcgvl.txt')
 with open(template_file, 'r') as fd:
     GlobalVersion_TcGVL = fd.read()
 
