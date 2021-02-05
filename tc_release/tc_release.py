@@ -252,6 +252,7 @@ def make_release(args):
 
     if args.version_string in (tag.name for tag in repo.tags):
         print(f'Tag {args.version_string} already exists, skipping')
+        repo.close()
         return
 
     # Check format of version_number
@@ -430,11 +431,14 @@ def make_release(args):
     # Push commit
     # --tags is not ideal, but since this is the only tag we're creating
     # in this temp area, it should be safe
-    if not args.dry_run:
+    if args.dry_run:
+        pushStatus = None
+    else:
         pushStatus = origin.push(tags=True)
         logging.info('Push complete')
-        repo.close()
-        return pushStatus
+
+    repo.close()
+    return pushStatus
 
 
 def _main(args):
