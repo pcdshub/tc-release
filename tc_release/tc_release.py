@@ -229,8 +229,8 @@ def make_release(args):
 
     repo.heads.master.set_tracking_branch(origin.refs.master)
 
-    if args.version_string in (tag.tag for tag in repo.tags):
-        print(f'Tag {args.version} already exists, skipping')
+    if args.version_string in (tag.name for tag in repo.tags):
+        print(f'Tag {args.version_string} already exists, skipping')
         return
 
     # Check format of version_number
