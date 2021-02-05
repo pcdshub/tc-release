@@ -297,6 +297,11 @@ def make_release(args):
 
     # Getting the ProjectVersion, Company, Author and Title tags
     projectVersion_tag = plcproj_root.find('.//ProjectVersion', nsmap)
+    if projectVersion_tag is None:
+        print('Did not find a plc project version tag! Did you forgot to '
+              'set the plc project version to v0.0.0?')
+        repo.close()
+        raise RuntimeError('Missing ProjectVersion tag')
     # company_tag and author_tag are currently unused
     # company_tag = plcproj_root.find('.//Company', nsmap)
     # author_tag = plcproj_root.find('.//Author', nsmap)
@@ -304,6 +309,7 @@ def make_release(args):
 
     logging.info('Updating plcproj with version number: %s', version_string)
     # Adding version string to plcproj
+
     projectVersion_tag.text = version_string
 
     # To make this verson number available in the PLC runtime,
