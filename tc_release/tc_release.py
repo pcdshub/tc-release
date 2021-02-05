@@ -54,6 +54,18 @@ def parse_args():
                               'which one to set the version number on.'))
     parser.add_argument('--deploy', action='store_true',
                         help=('Also make and deploy the IOC if applicable.'))
+    parser.add_argument('--deploy-path', type=str,
+                        help=('Specify a deploy directory for the IOC. '
+                              'For example, --deploy-path /my/home/folder '
+                              'will create a deployment at '
+                              '/my/home/folder/repo_name/version_string. '
+                              'If omitted, we will use '
+                              '$EPICS_SITE_TOP/ioc/hutch, where hutch is '
+                              'guessed based on the existing folders in '
+                              '$EPICS_SITE_TOP/ioc and the repository name. '
+                              'If $EPICS_SITE_TOP is unset, the default is '
+                              'The SLAC LCLS PCDS directory, '
+                              '/cds/group/pcds/epics.'))
     parser.add_argument('--dry-run', action='store_true',
                         help=('Run without pushing back to the repo and '
                               'without cleaning up the checkout directory.'))
@@ -177,33 +189,42 @@ def make_deploy(args):
     repo_url = args.repo_url
     tag = args.version_string
     dry_run = args.dry_run
-
-    epics_site_top = os.environ.get('EPICS_SITE_TOP', '/cds/group/pcds/epics')
-    ioc_dir = os.path.join(epics_site_top, 'ioc')
-    categories = next(os.walk(ioc_dir))[1]
     repo_name = os.path.split(repo_url)[-1].replace('.git', '')
-    repo_parts = repo_name.split('-')
 
-    correct_category = None
-    for cat in categories:
-        if cat in repo_parts:
-            correct_category = cat
-            break
+    if args.deploy_path:
+        deploy_path = args.deploy_path
+    else:
+        epics_site_top = os.environ.get('EPICS_SITE_TOP',
+                                        '/cds/group/pcds/epics')
+        ioc_dir = os.path.join(epics_site_top, 'ioc')
+        categories = next(os.walk(ioc_dir))[1]
+        repo_parts = repo_name.split('-')
 
-    if correct_category is None:
-        raise RuntimeError('Can not determine where to deploy IOC')
+        correct_category = None
+        for cat in categories:
+            if cat in repo_parts:
+                correct_category = cat
+                break
 
-    hutch_iocs = os.path.join(ioc_dir, correct_category)
-    deploy_dir = os.path.join(hutch_iocs, repo_name)
+        if correct_category is None:
+            raise RuntimeError('Can not determine where to deploy IOC')
+
+        deploy_path = os.path.join(ioc_dir, correct_category)
+
+    if not os.path.isdir(deploy_path):
+        print(f'{deploy_path} does not exist! '
+              'Verify you used a valid path!')
+
+    repo_deploy_path = os.path.join(deploy_path, repo_name)
 
     if not args.dry_run:
         try:
-            os.mkdir(deploy_dir)
+            os.mkdir(repo_deploy_path)
         except FileExistsError:
             pass
 
-    print(f'Deploying {repo_name} to {deploy_dir} at {tag}')
-    deploy(repo_url, tag, deploy_dir, dry_run)
+    print(f'Deploying {repo_name} to {repo_deploy_path} at {tag}')
+    deploy(repo_url, tag, repo_deploy_path, dry_run)
 
 
 def make_release(args):
