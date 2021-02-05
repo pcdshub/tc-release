@@ -181,7 +181,7 @@ def make_deploy(args):
     epics_site_top = os.environ.get('EPICS_SITE_TOP', '/cds/group/pcds/epics')
     ioc_dir = os.path.join(epics_site_top, 'ioc')
     categories = next(os.walk(ioc_dir))[1]
-    repo_name = os.path.split(repo_url).replace('.git', '')
+    repo_name = os.path.split(repo_url)[-1].replace('.git', '')
     repo_parts = repo_name.split('-')
 
     correct_category = None
@@ -229,7 +229,7 @@ def make_release(args):
 
     repo.heads.master.set_tracking_branch(origin.refs.master)
 
-    if args.version_string in (tag.tag.tag for tag in repo.tags):
+    if args.version_string in (tag.tag for tag in repo.tags):
         print(f'Tag {args.version} already exists, skipping')
         return
 
