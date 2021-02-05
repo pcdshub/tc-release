@@ -126,7 +126,7 @@ def find_makefiles(directory):
     return make_dirs
 
 
-def deploy(repo_url, tag, directory):
+def deploy(repo_url, tag, directory, dry_run):
     """
     Clone a repo to a specific directory at a specific tag, then build the IOC
 
@@ -149,18 +149,61 @@ def deploy(repo_url, tag, directory):
         subdirectory with the name of the tag.
         For example: directory=/cds/group/epics/ioc/kfe/my_plc
         would deploy to /cds/group/epics/ioc/kfe/my_plc/v1.0.0
+
+    dry_run : bool
+        If True, don't actually do anything.
+        If False, do things.
     """
     # Clone the repo
     deploy_dir = os.path.join(directory, tag)
-    Repo.clone_from(repo_url, deploy_dir, depth=1, branch=tag)
+    print(f'Deploying to {deploy_dir}')
+    if not dry_run:
+        Repo.clone_from(repo_url, deploy_dir, depth=1, branch=tag)
 
     # Find the makefiles
-    make_dirs = find_makefiles(deploy_dir)
+    if not dry_run:
+        make_dirs = find_makefiles(deploy_dir)
 
     # Make all the makefiles
-    for make_dir in make_dirs:
-        with pushd(make_dir):
-            subprocess.run('make')
+    if not dry_run:
+        for make_dir in make_dirs:
+            with pushd(make_dir):
+                subprocess.run('make')
+
+
+def make_deploy(args):
+    if not args.deploy:
+        return
+    repo_url = args.repo_url
+    tag = args.version_string
+    dry_run = args.dry_run
+
+    epics_site_top = os.environ.get('EPICS_SITE_TOP', '/cds/group/pcds/epics')
+    ioc_dir = os.path.join(epics_site_top, 'ioc')
+    categories = next(os.walk(ioc_dir))[1]
+    repo_name = os.path.split(repo_url).replace('.git', '')
+    repo_parts = repo_name.split('-')
+
+    correct_category = None
+    for cat in categories:
+        if cat in repo_parts:
+            correct_category = cat
+            break
+
+    if correct_category is None:
+        raise RuntimeError('Can not determine where to deploy IOC')
+
+    hutch_iocs = os.path.join(ioc_dir, correct_category)
+    deploy_dir = os.path.join(hutch_iocs, repo_name)
+
+    if not args.dry_run:
+        try:
+            os.mkdir(deploy_dir)
+        except FileExistsError:
+            pass
+
+    print(f'Deploying {repo_name} to {deploy_dir} at {tag}')
+    deploy(repo_url, tag, deploy_dir, dry_run)
 
 
 def make_release(args):
@@ -185,6 +228,10 @@ def make_release(args):
     repo.heads.master.checkout()
 
     repo.heads.master.set_tracking_branch(origin.refs.master)
+
+    if args.version_string in (tag.tag.tag for tag in repo.tags):
+        print(f'Tag {args.version} already exists, skipping')
+        return
 
     # Check format of version_number
     projectVersion_pattern = re.compile(r'v([\d.]+)')
@@ -370,7 +417,8 @@ def make_release(args):
 
 
 def _main(args):
-    return make_release(args)
+    make_release(args)
+    make_deploy(args)
 
 
 def main():
