@@ -298,10 +298,10 @@ def make_release(args):
     # Getting the ProjectVersion, Company, Author and Title tags
     projectVersion_tag = plcproj_root.find('.//ProjectVersion', nsmap)
     if projectVersion_tag is None:
-        print('Did not find a plc project version tag! Did you forgot to '
-              'set the plc project version to v0.0.0?')
+        err = ('Did not find a plc project version tag! Did you forgot to '
+               'set the plc project version to 0.0.0 in TwinCAT?')
         repo.close()
-        raise RuntimeError('Missing ProjectVersion tag')
+        raise RuntimeError(err)
     # company_tag and author_tag are currently unused
     # company_tag = plcproj_root.find('.//Company', nsmap)
     # author_tag = plcproj_root.find('.//Author', nsmap)
