@@ -170,7 +170,7 @@ def deploy(repo_url, tag, directory, dry_run):
     """
     # Clone the repo
     deploy_dir = os.path.join(directory, tag)
-    print(f'Deploying to {deploy_dir}')
+    logger.info(f'Deploying to {deploy_dir}')
     if not dry_run:
         Repo.clone_from(repo_url, deploy_dir, depth=1, branch=tag)
 
@@ -214,8 +214,9 @@ def make_deploy(args):
         deploy_path = os.path.join(ioc_dir, correct_category)
 
     if not os.path.isdir(deploy_path):
-        print(f'{deploy_path} does not exist! '
-              'Verify you used a valid path!')
+        logger.error(f'{deploy_path} does not exist! '
+                     'Verify you used a valid path!')
+        return
 
     repo_deploy_path = os.path.join(deploy_path, repo_name)
 
@@ -225,7 +226,7 @@ def make_deploy(args):
         except FileExistsError:
             pass
 
-    print(f'Deploying {repo_name} to {repo_deploy_path} at {tag}')
+    logger.info(f'Deploying {repo_name} to {repo_deploy_path} at {tag}')
     deploy(repo_url, tag, repo_deploy_path, dry_run)
 
 
@@ -253,7 +254,7 @@ def make_release(args):
     repo.heads.master.set_tracking_branch(origin.refs.master)
 
     if args.version_string in (tag.name for tag in repo.tags):
-        print(f'Tag {args.version_string} already exists, skipping')
+        logger.warning(f'Tag {args.version_string} already exists, skipping')
         repo.close()
         return
 
@@ -262,7 +263,7 @@ def make_release(args):
     version_string = re.search(projectVersion_pattern,
                                args.version_string).group(1)
     if not version_string:
-        print('Error, version string does not match format "vX.X.X"')
+        logger.error('Error, version string does not match format "vX.X.X"')
         exit(1)
 
     # Inject version_number into .tcproj
@@ -272,7 +273,7 @@ def make_release(args):
     plcproj_path = find('*.plcproj', working_dir)
 
     if not len(plcproj_path):
-        print('Error, did not find .plcproj file.')
+        logger.error('Error, did not find .plcproj file.')
         exit(1)
     elif args.plcproj:
         for i, proj in enumerate(plcproj_path):
@@ -280,11 +281,11 @@ def make_release(args):
                 plcproj_file = plcproj_path[i]
                 break
         else:
-            print(('Error, did not find specified file '
-                   '{}.plcproj'.format(args.plcproj)))
+            logger.error(('Error, did not find specified file '
+                          '{}.plcproj'.format(args.plcproj)))
             exit(1)
     elif len(plcproj_path) > 1:
-        print('Error, found multiple .plcproj files.')
+        logger.error('Error, found multiple .plcproj files.')
         exit(1)
     else:
         plcproj_file = plcproj_path[0]
@@ -348,7 +349,7 @@ def make_release(args):
     try:
         gvl_attrib['Id'] = str(uuid.uuid4())
     except KeyError:
-        print('Error, could not find Id attribute in GVL tag...')
+        logger.error('Error, could not find Id attribute in GVL tag...')
         exit(1)
 
     # Now we modify the title and version numbers
