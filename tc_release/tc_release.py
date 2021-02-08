@@ -71,6 +71,12 @@ def parse_args():
     parser.add_argument('--dry-run', action='store_true',
                         help=('Run without pushing back to the repo and '
                               'without cleaning up the checkout directory.'))
+    parser.add_argument('--log-level', type=str, default='info',
+                        help=('Python logging level, either a string '
+                              'matching the standard log level names '
+                              '(debug, info, warning, error, critical) '
+                              'or an integer. All log messages at the input '
+                              'level or higher will be shown.'))
     return parser.parse_args()
 
 
@@ -457,9 +463,29 @@ def _main(args):
     make_deploy(args)
 
 
+def configure_logging(args):
+    valid_config = True
+    level = args.log_level
+
+    try:
+        level = getattr(logging, level.upper())
+    except Exception:
+        try:
+            level = int(level)
+        except Exception:
+            level = logging.INFO
+            valid_config = False
+
+    logging.basicConfig(level=level)
+
+    if not valid_config:
+        logger.warning(f'Invalid logging specification {args.log_level}! '
+                       'Falling back to info level.')
+
+
 def main():
-    logging.basicConfig(level=logging.DEBUG)
     args = parse_args()
+    configure_logging(args)
     try:
         _main(args)
     finally:
