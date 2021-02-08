@@ -14,6 +14,8 @@ import uuid
 
 from lxml import etree
 
+logger = logging.getLogger(__name__)
+
 # Platform-specific setup
 if 'win' in sys.platform:
     # Set up git env variables
@@ -33,7 +35,7 @@ else:
     dirname = '.tc-release-tmp'
 
 # Late import, needs to be after the above on windows
-from git import Repo  # isort:skip
+from git import Repo  # noqa isort:skip
 
 working_dir = os.path.join(os.getcwd(), dirname)
 
@@ -230,13 +232,13 @@ def make_deploy(args):
 def make_release(args):
     # Create a temp directory, and clone the repo, and check out master
 
-    logging.info('Creating working directory: %s', working_dir)
-    logging.info('Initializing bare git repo, establishing remote, and '
-                 'checking out master')
+    logger.info('Creating working directory: %s', working_dir)
+    logger.info('Initializing bare git repo, establishing remote, and '
+                'checking out master')
     repo = Repo.init(working_dir)
-    logging.info('Adding remote')
-    logging.debug('Working directory: %s, Repo: %s',
-                  working_dir, args.repo_url)
+    logger.info('Adding remote')
+    logger.debug('Working directory: %s, Repo: %s',
+                 working_dir, args.repo_url)
     origin = repo.create_remote('origin', str(args.repo_url))
 
     if not origin.exists():
@@ -266,7 +268,7 @@ def make_release(args):
     # Inject version_number into .tcproj
     # Find .tcproj
 
-    logging.info('Looking for .plcproj')
+    logger.info('Looking for .plcproj')
     plcproj_path = find('*.plcproj', working_dir)
 
     if not len(plcproj_path):
@@ -288,7 +290,7 @@ def make_release(args):
         plcproj_file = plcproj_path[0]
 
     # Getting our xml structure to work with
-    logging.info('Parsing plcproj')
+    logger.info('Parsing plcproj')
     plcproj_tree = etree.parse(plcproj_file)
 
     plcproj_root = plcproj_tree.getroot()
@@ -309,7 +311,7 @@ def make_release(args):
         repo.close()
         raise RuntimeError(err)
 
-    logging.info('Updating plcproj with version number: %s', version_string)
+    logger.info('Updating plcproj with version number: %s', version_string)
     # Adding version string to plcproj
 
     projectVersion_tag.text = version_string
@@ -322,7 +324,7 @@ def make_release(args):
     # We can get this info for scanning for a .TcPOU in the project files
     # (there has to be at least one), and extracting these tags
 
-    logging.info('Creating Global_Version.TcGVL')
+    logger.info('Creating Global_Version.TcGVL')
     pouFiles = find('*.TcPOU', working_dir)
     pouTree = etree.parse(pouFiles[0])
     pouRoot = pouTree.getroot()
@@ -390,17 +392,17 @@ def make_release(args):
     # Global_Version.TcGVL file and linking in the .tcproj
 
     # Creating file and folder
-    logging.info('Writing Global_Version.TcGVL to file')
+    logger.info('Writing Global_Version.TcGVL to file')
     version_dir = os.path.join(os.path.dirname(plcproj_file), 'Version')
     os.makedirs(version_dir, exist_ok=True)
     GV_TcGVL_file = os.path.join(version_dir, 'Global_Version.TcGVL')
 
     GlobalVersion_TcGVL_tree.write(GV_TcGVL_file, encoding='utf-8',
                                    xml_declaration=True)
-    logging.info('File created successfully: %s', GV_TcGVL_file)
+    logger.info('File created successfully: %s', GV_TcGVL_file)
 
     # Linking in the .plcproj
-    logging.info('Linking Global_Version.TcGVL into plcproj')
+    logger.info('Linking Global_Version.TcGVL into plcproj')
 
     # Check if Version folder is already linked, if not add it
     if not plcproj_root.find(".//ItemGroup/Folder[@Include='Version']", nsmap):
@@ -418,9 +420,9 @@ def make_release(args):
         '''))
 
     # Writing new plcproj to disk
-    logging.info('Writing updated .plcproj to file')
+    logger.info('Writing updated .plcproj to file')
     plcproj_tree.write(plcproj_file, encoding='utf-8', xml_declaration=True)
-    logging.info('.plc project has been updated')
+    logger.info('.plc project has been updated')
 
     # Commit changes
     repoIndex = repo.index
@@ -428,7 +430,7 @@ def make_release(args):
     repoIndex.add([plcproj_file])
     repoIndex.write()
 
-    logging.info('Committing changes')
+    logger.info('Committing changes')
     commit_message = "Tagging version {version}".format(
         version=args.version_string)
     repoIndex.commit(commit_message, skip_hooks=True)
@@ -443,7 +445,7 @@ def make_release(args):
         pushStatus = None
     else:
         pushStatus = origin.push(tags=True)
-        logging.info('Push complete')
+        logger.info('Push complete')
 
     repo.close()
     return pushStatus
@@ -461,7 +463,7 @@ def main():
         _main(args)
     finally:
         if not args.dry_run:
-            logging.info('Cleaning up')
+            logger.info('Cleaning up')
             shutil.rmtree(working_dir, onerror=remove_readonly)
 
 
