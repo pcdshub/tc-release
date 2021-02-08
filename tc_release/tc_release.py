@@ -476,7 +476,7 @@ def configure_logging(args):
             level = logging.INFO
             valid_config = False
 
-    logging.basicConfig(level=level)
+    logging.basicConfig(level=level, format='%(levelname)-8s %(message)s')
 
     if not valid_config:
         logger.warning(f'Invalid logging specification {args.log_level}! '
