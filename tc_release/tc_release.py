@@ -480,9 +480,11 @@ def main():
         logger.debug(error_msg, exc_info=True)
         logger.error(error_msg)
     finally:
-        if not args.dry_run:
+        repo.close()
+        if args.dry_run:
+            logger.info(f'Skipping cleanup for dry-run: see {working_dir}.')
+        else:
             logger.info('Cleaning up')
-            repo.close()
             shutil.rmtree(working_dir, onerror=remove_readonly)
 
 
