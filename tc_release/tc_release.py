@@ -214,14 +214,13 @@ def make_deploy(args):
                 break
 
         if correct_category is None:
-            raise RuntimeError('Can not determine where to deploy IOC')
+            raise RuntimeError('Cannot determine where to deploy IOC')
 
         deploy_path = os.path.join(ioc_dir, correct_category)
 
     if not os.path.isdir(deploy_path):
-        logger.error(f'{deploy_path} does not exist! '
-                     'Verify you used a valid path!')
-        return
+        raise RuntimeError(f'{deploy_path} does not exist! '
+                           'Verify you used a valid path!')
 
     repo_deploy_path = os.path.join(deploy_path, repo_name)
 
@@ -235,13 +234,23 @@ def make_deploy(args):
     deploy(repo_url, tag, repo_deploy_path, dry_run)
 
 
-def make_release(args):
-    # Create a temp directory, and clone the repo, and check out master
+def initialize_repo():
+    """
+    Create the gitpython Repo object for make_release.
 
+    This is done separately to simplify the cleanup. The repo object
+    must be closed or else the working directory rmtree will fail.
+    """
     logger.info('Creating working directory: %s', working_dir)
     logger.info('Initializing bare git repo, establishing remote, and '
                 'checking out master')
-    repo = Repo.init(working_dir)
+    return Repo.init(working_dir)
+
+
+def make_release(args, repo):
+    """The core tc_release routine for tagging projects."""
+    # Create a temp directory, and clone the repo, and check out master
+
     logger.info('Adding remote')
     logger.debug('Working directory: %s, Repo: %s',
                  working_dir, args.repo_url)
@@ -260,7 +269,6 @@ def make_release(args):
 
     if args.version_string in (tag.name for tag in repo.tags):
         logger.warning(f'Tag {args.version_string} already exists, skipping')
-        repo.close()
         return
 
     # Check format of version_number
@@ -268,8 +276,7 @@ def make_release(args):
     version_string = re.search(projectVersion_pattern,
                                args.version_string).group(1)
     if not version_string:
-        logger.error('Error, version string does not match format "vX.X.X"')
-        exit(1)
+        raise ValueError('Version string does not match format "vX.X.X"')
 
     # Inject version_number into .tcproj
     # Find .tcproj
@@ -278,20 +285,17 @@ def make_release(args):
     plcproj_path = find('*.plcproj', working_dir)
 
     if not len(plcproj_path):
-        logger.error('Error, did not find .plcproj file.')
-        exit(1)
+        raise RuntimeError('Did not find .plcproj file.')
     elif args.plcproj:
         for i, proj in enumerate(plcproj_path):
             if args.plcproj == os.path.split(proj)[1].split('.')[0]:
                 plcproj_file = plcproj_path[i]
                 break
         else:
-            logger.error(('Error, did not find specified file '
-                          '{}.plcproj'.format(args.plcproj)))
-            exit(1)
+            raise RuntimeError('Did not find specified file '
+                               '{}.plcproj'.format(args.plcproj))
     elif len(plcproj_path) > 1:
-        logger.error('Error, found multiple .plcproj files.')
-        exit(1)
+        raise RuntimeError('Found multiple .plcproj files.')
     else:
         plcproj_file = plcproj_path[0]
 
@@ -314,7 +318,6 @@ def make_release(args):
         err = ('Did not find a plc project version tag or a title tag! '
                'Did you forgot to set the plc project version to 0.0.0 '
                'or select an appropriate project title in TwinCAT?')
-        repo.close()
         raise RuntimeError(err)
 
     logger.info('Updating plcproj with version number: %s', version_string)
@@ -354,8 +357,7 @@ def make_release(args):
     try:
         gvl_attrib['Id'] = str(uuid.uuid4())
     except KeyError:
-        logger.error('Error, could not find Id attribute in GVL tag...')
-        exit(1)
+        raise RuntimeError('Could not find Id attribute in GVL tag')
 
     # Now we modify the title and version numbers
     declaration = GlobalVersion_TcGVL_root.find('.//Declaration')
@@ -449,16 +451,16 @@ def make_release(args):
     # in this temp area, it should be safe
     if args.dry_run:
         pushStatus = None
+        logger.info('Skipping push for dry-run')
     else:
         pushStatus = origin.push(tags=True)
         logger.info('Push complete')
 
-    repo.close()
     return pushStatus
 
 
-def _main(args):
-    make_release(args)
+def _main(args, repo):
+    make_release(args, repo)
     make_deploy(args)
 
 
@@ -470,11 +472,17 @@ def configure_logging(args):
 def main():
     args = parse_args()
     configure_logging(args)
+    repo = initialize_repo()
     try:
-        _main(args)
+        _main(args, repo)
+    except Exception as exc:
+        error_msg = exc.args[0]
+        logger.debug(error_msg, exc_info=True)
+        logger.error(error_msg)
     finally:
         if not args.dry_run:
             logger.info('Cleaning up')
+            repo.close()
             shutil.rmtree(working_dir, onerror=remove_readonly)
 
 
