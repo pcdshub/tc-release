@@ -413,14 +413,17 @@ def make_release(args, repo):
     logger.info('Linking Global_Version.TcGVL into plcproj')
 
     # Check if Version folder is already linked, if not add it
-    ver_find = ".//ItemGroup/Folder[@Include='Version']"
-    if not len(plcproj_root.find(ver_find, nsmap)):
+    folder_find = ".//ItemGroup/Folder[@Include='Version']"
+    ver_folders = plcproj_root.find(folder_find, nsmap)
+    if ver_folders is None or not len(ver_folders):
         folder = plcproj_root.find('.//ItemGroup/Folder', nsmap)
         folder.addnext(etree.XML('<Folder Include="Version" />'))
 
     # Check if Compile Include if not add it (it better already be there)
-    comp_find = r'.//ItemGroup/Compile[@Include="Version\Global_Version.TcGVL"]'
-    if not len(plcproj_root.find(comp_find, nsmap)):
+    compile_find = (r'.//ItemGroup/Compile'
+                    r'[@Include="Version\Global_Version.TcGVL"]')
+    ver_compiles = plcproj_root.find(compile_find, nsmap)
+    if ver_compiles is None or not len(ver_compiles):
         compile_include = plcproj_root.find('.//ItemGroup/Compile', nsmap)
         compile_include.addnext(etree.XML(r'''
         <Compile Include="Version\Global_Version.TcGVL">
