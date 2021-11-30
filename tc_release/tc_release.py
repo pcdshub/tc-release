@@ -45,37 +45,65 @@ with open(template_file, 'r') as fd:
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description=('Properly tags/version '
-                                                  'your TC project with GIT'))
-    parser.add_argument('version_string', metavar='VERSION NUMBER', type=str,
-                        help='Version number must be vMAJOR.MINOR.BUGFIX')
-    parser.add_argument('repo_url', type=str,
-                        help='URL or path to the repo (for cloning)')
-    parser.add_argument('--plcproj', default='',
-                        help=('If multiple PLC projects in the repo, specify '
-                              'which one to set the version number on.'))
-    parser.add_argument('--deploy', action='store_true',
-                        help=('Also make and deploy the IOC if applicable.'))
-    parser.add_argument('--deploy-path', type=str,
-                        help=('Specify a deploy directory for the IOC. '
-                              'For example, --deploy-path /my/home/folder '
-                              'will create a deployment at '
-                              '/my/home/folder/repo_name/version_string. '
-                              'If omitted, we will use '
-                              '$EPICS_SITE_TOP/ioc/hutch, where hutch is '
-                              'guessed based on the existing folders in '
-                              '$EPICS_SITE_TOP/ioc and the repository name. '
-                              'If $EPICS_SITE_TOP is unset, the default is '
-                              'The SLAC LCLS PCDS directory, '
-                              '/cds/group/pcds/epics.'))
-    parser.add_argument('--dry-run', action='store_true',
-                        help=('Run without pushing back to the repo and '
-                              'without cleaning up the checkout directory.'))
-    parser.add_argument('--verbose', '-v', action='count', default=0,
-                        help=('Increase the number of messages shown '
-                              'to terminal. This decreases '
-                              'the log level by 10 for each count of v, '
-                              'defaulting to info level.'))
+    parser = argparse.ArgumentParser(
+        description="Properly tags/version your TC project with GIT",
+    )
+    parser.add_argument(
+        "version_string",
+        metavar="VERSION_NUMBER",
+        type=str,
+        help="Version number must be vMAJOR.MINOR.BUGFIX",
+    )
+    parser.add_argument(
+        "repo_url", type=str,
+        help="URL or path to the repo (for cloning)"
+    )
+    parser.add_argument(
+        "--plcproj",
+        default="",
+        help=(
+            "If multiple PLC projects in the repo, specify which one to set "
+            "the version number on."
+        ),
+    )
+    parser.add_argument(
+        "--deploy",
+        action="store_true",
+        help="Also make and deploy the IOC if applicable.",
+    )
+    parser.add_argument(
+        "--deploy-path",
+        type=str,
+        help=(
+            "Specify a deploy directory for the IOC. "
+            "For example, --deploy-path /my/home/folder will create a "
+            "deployment at /my/home/folder/repo_name/version_string. "
+            "If omitted, we will use $EPICS_SITE_TOP/ioc/hutch, where hutch "
+            "is guessed based on the existing folders in $EPICS_SITE_TOP/ioc "
+            "and the repository name. "
+            "If $EPICS_SITE_TOP is unset, the default is "
+            "The SLAC LCLS PCDS directory, /cds/group/pcds/epics."
+        ),
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help=(
+            "Run without pushing back to the repo and without cleaning up the "
+            "checkout directory."
+        ),
+    )
+    parser.add_argument(
+        "--verbose",
+        "-v",
+        action="count",
+        default=0,
+        help=(
+            "Increase the number of messages shown in the terminal. This "
+            "decreases the log level by 10 for each count of -v, starting "
+            "at the INFO level (20)."
+        ),
+    )
     return parser.parse_args()
 
 
