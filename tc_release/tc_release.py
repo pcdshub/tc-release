@@ -47,7 +47,7 @@ with open(template_file, 'r') as fd:
 def parse_args():
     parser = argparse.ArgumentParser(description=('Properly tags/version '
                                                   'your TC project with GIT'))
-    parser.add_argument('version_string', metavar='VERSION NUMBER', type=str,
+    parser.add_argument('version_string', metavar='VERSION_NUMBER', type=str,
                         help='Version number must be vMAJOR.MINOR.BUGFIX')
     parser.add_argument('repo_url', type=str,
                         help='URL or path to the repo (for cloning)')
