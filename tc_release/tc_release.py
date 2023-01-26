@@ -12,6 +12,8 @@ import subprocess
 import sys
 import uuid
 
+from typing import List
+
 from lxml import etree
 
 logger = logging.getLogger(__name__)
@@ -107,11 +109,27 @@ def parse_args():
     return parser.parse_args()
 
 
-def find(pattern, path):
+def find(pattern: str, path: str) -> List[str]:
+    """
+    Case-insensitive recursive search of ``path`` for ``pattern``.
+
+    Parameters
+    ----------
+    pattern : str
+        The glob pattern to search for (e.g., "*.plcproj")
+
+    path : str
+        The top-level directory to search.
+
+    Returns
+    -------
+    List[str]
+        List of paths matching the pattern.
+    """
     result = []
-    for root, dirs, files in os.walk(path):
+    for root, _, files in os.walk(path):
         for name in files:
-            if fnmatch.fnmatch(name, pattern):
+            if fnmatch.fnmatch(name.lower(), pattern.lower()):
                 result.append(os.path.join(root, name))
     return result
 
