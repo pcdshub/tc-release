@@ -14,25 +14,21 @@ build:
   noarch: python
   script: {{ PYTHON }} -m pip install . -vv
 
-
-
 requirements:
   build:
-  - python >=3
+  - python >=3.9
   - setuptools_scm
   - pip
   run:
-  - python >=3
+  - python >=3.9
   - lxml
   - GitPython
 
-
-
 test:
+  requires:
+  - pytest
   imports:
   - tc_release
-
-
 
 about:
   home: https://github.com/pcdshub/tc_release
