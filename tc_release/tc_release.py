@@ -11,7 +11,6 @@ import stat
 import subprocess
 import sys
 import uuid
-from typing import List
 
 from lxml import etree
 
