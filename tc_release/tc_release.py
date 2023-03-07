@@ -41,7 +41,7 @@ from git import Repo  # noqa isort:skip
 working_dir = os.path.join(os.getcwd(), dirname)
 
 template_file = os.path.join(os.path.dirname(__file__), 'tcgvl.txt')
-with open(template_file, 'r') as fd:
+with open(template_file) as fd:
     GlobalVersion_TcGVL = fd.read()
 
 
@@ -108,7 +108,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def find(pattern: str, path: str) -> List[str]:
+def find(pattern: str, path: str) -> list[str]:
     """
     Case-insensitive recursive search of ``path`` for ``pattern``.
 
