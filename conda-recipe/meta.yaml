@@ -1,8 +1,10 @@
-{% set data = load_setup_py_data() %}
+{% set package_name = "tc-release" %}
+{% set import_name = "tc_release" %}
+{% set version = load_file_regex(load_file=os.path.join(import_name, "_version.py"), regex_pattern=".*version = '(\S+)'").group(1) %}
 
 package:
-  name: tc_release
-  version : {{ data.get('version') }}
+  name: {{ package_name }}
+  version: {{ version }}
 
 source:
   path: ..
@@ -10,20 +12,23 @@ source:
 build:
   number: 0
   noarch: python
+  script: {{ PYTHON }} -m pip install . -vv
 
 requirements:
   build:
-    - python >=3
-    - setuptools
-
+  - python >=3.9
+  - setuptools_scm
+  - pip
   run:
-    - python >=3
-    - lxml
-    - GitPython
+  - python >=3.9
+  - lxml
+  - GitPython
 
 test:
+  requires:
+  - pytest
   imports:
-    - tc_release
+  - tc_release
 
 about:
   home: https://github.com/pcdshub/tc_release
