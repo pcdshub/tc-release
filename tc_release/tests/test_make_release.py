@@ -31,6 +31,7 @@ def test_dry_run(
     Test that the dry run works on a few repositories.
     """
     # Sanity check: did we pick a real public repo?
+    # If not, the git commands may ask for auth during pytest...
     url = f'https://github.com/pcdshub/{reponame}'
     assert requests.head(url).status_code == 200
     # Drop into the subfolder to do the work here
@@ -75,6 +76,7 @@ def test_dry_run_from_main(monkeypatch: pytest.MonkeyPatch):
     """
     reponame = 'lcls-twincat-general'
     # Sanity check: did we pick a real public repo?
+    # If not, the git commands may ask for auth during pytest...
     url = f'https://github.com/pcdshub/{reponame}'
     assert requests.head(url).status_code == 200
     # Drop into the subfolder to do the work here
