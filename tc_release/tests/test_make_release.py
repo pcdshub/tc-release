@@ -3,8 +3,10 @@ import shutil
 from pathlib import Path
 
 import pytest
+import requests
 
-from tc_release.tc_release import initialize_repo, main, make_release
+from ..tc_release import dirname as main_dirname
+from ..tc_release import initialize_repo, main, make_release
 
 
 @pytest.mark.parametrize(
@@ -28,13 +30,16 @@ def test_dry_run(
     """
     Test that the dry run works on a few repositories.
     """
+    # Sanity check: did we pick a real public repo?
+    url = f'https://github.com/pcdshub/{reponame}'
+    assert requests.head(url).status_code == 200
     # Drop into the subfolder to do the work here
-    monkeypatch.chdir('artifacts')
+    monkeypatch.chdir(Path(__file__).parent / 'artifacts')
     # Remove any pre-existing folder
     if os.path.exists(reponame):
         shutil.rmtree(reponame)
     # Run the part of the release up to but not including git push
-    working_dir = os.getcwd()
+    working_dir = os.path.join(os.getcwd(), reponame)
     repo = initialize_repo(working_dir=working_dir)
     repo_url = f'https://github.com/pcdshub/{reponame}'
     version = '999.999.999'
@@ -69,14 +74,18 @@ def test_dry_run_from_main(monkeypatch: pytest.MonkeyPatch):
     main.
     """
     reponame = 'lcls-twincat-general'
+    # Sanity check: did we pick a real public repo?
+    url = f'https://github.com/pcdshub/{reponame}'
+    assert requests.head(url).status_code == 200
     # Drop into the subfolder to do the work here
-    monkeypatch.chdir('artifacts')
+    monkeypatch.chdir(Path(__file__).parent / 'artifacts')
     # Remove any pre-existing folder
-    if os.path.exists(reponame):
-        shutil.rmtree(reponame)
+    full_workdir = os.path.join(os.getcwd(), main_dirname)
+    if os.path.exists(full_workdir):
+        shutil.rmtree(full_workdir)
     # Hope for no issues
     assert main([
         'tc-release',
         'v888.888.888',
-        'https://github.com/pcdshub/lcls-twincat-general',
+        url,
     ]) == 0
