@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import argparse
 import contextlib
 import fnmatch
@@ -10,6 +12,7 @@ import shutil
 import stat
 import subprocess
 import sys
+import typing
 import uuid
 
 from lxml import etree
@@ -37,14 +40,12 @@ else:
 # Late import, needs to be after the above on windows
 from git import Repo  # noqa isort:skip
 
-working_dir = os.path.join(os.getcwd(), dirname)
-
 template_file = os.path.join(os.path.dirname(__file__), 'tcgvl.txt')
 with open(template_file) as fd:
     GlobalVersion_TcGVL = fd.read()
 
 
-def parse_args():
+def parse_args(args: typing.Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Properly tags/version your TC project with GIT",
     )
@@ -104,7 +105,7 @@ def parse_args():
             "at the INFO level (20)."
         ),
     )
-    return parser.parse_args()
+    return parser.parse_args(args=args)
 
 
 def find(pattern: str, path: str) -> list[str]:
@@ -133,21 +134,21 @@ def find(pattern: str, path: str) -> list[str]:
 
 
 # Workaround for Windows file lock issues
-def remove_readonly(func, path, _):
+def remove_readonly(func: typing.Callable, path: str, _) -> None:
     "Clear the readonly bit and reattempt the removal"
     os.chmod(path, stat.S_IWRITE)
     func(path)
 
 
 @contextlib.contextmanager
-def pushd(new_dir):
+def pushd(new_dir: str) -> typing.Iterator[None]:
     previous_dir = os.getcwd()
     os.chdir(new_dir)
     yield
     os.chdir(previous_dir)
 
 
-def find_makefiles(directory):
+def find_makefiles(directory: str) -> list[str]:
     """
     Find the subdirectories that contain Makefiles.
 
@@ -189,7 +190,7 @@ def find_makefiles(directory):
     return make_dirs
 
 
-def deploy(repo_url, tag, directory, dry_run):
+def deploy(repo_url: str, tag: str, directory: str, dry_run: bool):
     """
     Clone a repo to a specific directory at a specific tag, then build the IOC
 
@@ -234,7 +235,7 @@ def deploy(repo_url, tag, directory, dry_run):
                 subprocess.run('make')
 
 
-def make_deploy(args):
+def make_deploy(args: argparse.Namespace):
     if not args.deploy:
         return
     repo_url = args.repo_url
@@ -278,7 +279,7 @@ def make_deploy(args):
     deploy(repo_url, tag, repo_deploy_path, dry_run)
 
 
-def initialize_repo():
+def initialize_repo(working_dir: str) -> Repo:
     """
     Create the gitpython Repo object for make_release.
 
@@ -291,14 +292,21 @@ def initialize_repo():
     return Repo.init(working_dir)
 
 
-def make_release(args, repo):
+def make_release(
+    repo: Repo,
+    working_dir: str,
+    full_version_string: str,
+    repo_url: str,
+    select_plcproj: str | None = None,
+    dry_run: bool = False,
+):
     """The core tc_release routine for tagging projects."""
     # Create a temp directory, and clone the repo, and check out master
 
     logger.info('Adding remote')
     logger.debug('Working directory: %s, Repo: %s',
-                 working_dir, args.repo_url)
-    origin = repo.create_remote('origin', str(args.repo_url))
+                 working_dir, repo_url)
+    origin = repo.create_remote('origin', str(repo_url))
 
     if not origin.exists():
         raise RuntimeError('Repo URL does not exist!')
@@ -311,14 +319,14 @@ def make_release(args, repo):
 
     repo.heads.master.set_tracking_branch(origin.refs.master)
 
-    if args.version_string in (tag.name for tag in repo.tags):
-        logger.warning(f'Tag {args.version_string} already exists, skipping')
+    if full_version_string in (tag.name for tag in repo.tags):
+        logger.warning(f'Tag {full_version_string} already exists, skipping')
         return
 
     # Check format of version_number
     projectVersion_pattern = re.compile(r'v([\d.]+)')
     version_string = re.search(projectVersion_pattern,
-                               args.version_string).group(1)
+                               full_version_string).group(1)
     if not version_string:
         raise ValueError('Version string does not match format "vX.X.X"')
 
@@ -330,14 +338,14 @@ def make_release(args, repo):
 
     if not len(plcproj_path):
         raise RuntimeError('Did not find .plcproj file.')
-    elif args.plcproj:
+    elif select_plcproj:
         for i, proj in enumerate(plcproj_path):
-            if args.plcproj == os.path.split(proj)[1].split('.')[0]:
+            if select_plcproj == os.path.split(proj)[1].split('.')[0]:
                 plcproj_file = plcproj_path[i]
                 break
         else:
             raise RuntimeError('Did not find specified file '
-                               '{}.plcproj'.format(args.plcproj))
+                               '{}.plcproj'.format(select_plcproj))
     elif len(plcproj_path) > 1:
         raise RuntimeError('Found multiple .plcproj files.')
     else:
@@ -488,16 +496,16 @@ def make_release(args, repo):
 
     logger.info('Committing changes')
     commit_message = "Tagging version {version}".format(
-        version=args.version_string)
+        version=full_version_string)
     repoIndex.commit(commit_message, skip_hooks=True)
 
     # Tag this commit
-    repo.create_tag(args.version_string, ref='HEAD', message=commit_message)
+    repo.create_tag(full_version_string, ref='HEAD', message=commit_message)
 
     # Push commit
     # --tags is not ideal, but since this is the only tag we're creating
     # in this temp area, it should be safe
-    if args.dry_run:
+    if dry_run:
         pushStatus = None
         logger.info('Skipping push for dry-run')
     else:
@@ -507,8 +515,15 @@ def make_release(args, repo):
     return pushStatus
 
 
-def _main(args, repo):
-    make_release(args, repo)
+def _main(args: argparse.Namespace, repo: Repo, working_dir: str):
+    make_release(
+        repo=repo,
+        working_dir=working_dir,
+        full_version_string=args.version_string,
+        repo_url=args.repo_url,
+        select_plcproj=args.plcproj,
+        dry_run=args.dry_run,
+    )
     make_deploy(args)
 
 
@@ -517,16 +532,19 @@ def configure_logging(args):
     logging.basicConfig(level=level, format='%(levelname)-8s %(message)s')
 
 
-def main():
-    args = parse_args()
+def main(cli_args=None):
+    return_value = 0
+    args = parse_args(args=cli_args)
     configure_logging(args)
-    repo = initialize_repo()
+    working_dir = os.path.join(os.getcwd(), dirname)
+    repo = initialize_repo(working_dir)
     try:
-        _main(args, repo)
+        _main(args=args, repo=repo, working_dir=working_dir)
     except Exception as exc:
         error_msg = exc.args[0]
         logger.debug(error_msg, exc_info=True)
         logger.error(error_msg)
+        return_value = 1
     finally:
         repo.close()
         if args.dry_run:
@@ -534,6 +552,7 @@ def main():
         else:
             logger.info('Cleaning up')
             shutil.rmtree(working_dir, onerror=remove_readonly)
+    return return_value
 
 
 if __name__ == "__main__":

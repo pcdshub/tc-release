@@ -112,3 +112,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Tests artifacts folder
+tc_release/tests/artifacts/*
+!tc_release/tests/artifacts/artifacts.txt
