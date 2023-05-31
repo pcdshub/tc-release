@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -9,6 +10,13 @@ import requests
 
 from ..tc_release import dirname as main_dirname
 from ..tc_release import initialize_repo, main, make_release
+
+
+@pytest.fixture(scope='session', autouse=True)
+def set_ci_git_id():
+    if os.environ.get('CI') and not subprocess.check_output(['git', 'config', 'user.name']):
+        subprocess.run(['git', 'config', '--global', 'user.name', 'pytest'])
+        subprocess.run(['git', 'config', '--global', 'user.email', 'pytest@ci.com'])
 
 
 @pytest.mark.parametrize(
