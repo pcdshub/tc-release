@@ -87,7 +87,6 @@ def test_dry_run_from_main(monkeypatch: pytest.MonkeyPatch):
         shutil.rmtree(full_workdir)
     # Hope for no issues
     assert main([
-        'tc-release',
         'v888.888.888',
         url,
     ]) == 0
