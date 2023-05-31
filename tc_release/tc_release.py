@@ -399,8 +399,10 @@ def make_release(
 
     GlobalVersion_TcGVL_attributes = GlobalVersion_TcGVL_root.attrib
 
-    GlobalVersion_TcGVL_attributes['ProductVersion'] = (
-        TcPlcObject_PRODUCT_VERSION)
+    if TcPlcObject_PRODUCT_VERSION is not None:
+        GlobalVersion_TcGVL_attributes['ProductVersion'] = (
+            TcPlcObject_PRODUCT_VERSION
+        )
     GlobalVersion_TcGVL_attributes['Version'] = TcPlcObject_VERSION
 
     # We should also change the GUID, just to be nice.
