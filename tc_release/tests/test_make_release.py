@@ -2,26 +2,24 @@ from __future__ import annotations
 
 import os
 import shutil
-import subprocess
 from pathlib import Path
 
 import pytest
 import requests
 
+from ..tc_release import Repo
 from ..tc_release import dirname as main_dirname
 from ..tc_release import initialize_repo, main, make_release
 
 
-@pytest.fixture(scope='session', autouse=True)
-def set_ci_git_id():
-    if os.environ.get('CI'):
-        try:
-            username = subprocess.check_output(['git', 'config', 'user.name'])
-        except subprocess.CalledProcessError:
-            username = ''
-        if not username:
-            subprocess.run(['git', 'config', '--global', 'user.name', 'pytest'])
-            subprocess.run(['git', 'config', '--global', 'user.email', 'pytest@ci.com'])
+def set_git_identity(repo: Repo) -> None:
+    """
+    Sets a local git username/email for commits for a repo.
+
+    This is required or else the GHA CI fails due to no identity.
+    """
+    repo.config_writer().set_value("user", "name", "pytest").release()
+    repo.config_writer().set_value("user", "email", "pytest@test.com").release()
 
 
 @pytest.mark.parametrize(
@@ -58,6 +56,7 @@ def test_dry_run(
     # Run the part of the release up to but not including git push
     working_dir = os.path.join(os.getcwd(), reponame)
     repo = initialize_repo(working_dir=working_dir)
+    set_git_identity(repo=repo)
     repo_url = f'https://github.com/pcdshub/{reponame}'
     version = '999.999.999'
     major, minor, fix = version.split('.')
@@ -105,6 +104,13 @@ def test_dry_run_from_main(monkeypatch: pytest.MonkeyPatch):
     full_workdir = os.path.join(os.getcwd(), main_dirname)
     if os.path.exists(full_workdir):
         shutil.rmtree(full_workdir)
+    # monkeypatch a local git username/email to help the ci
+
+    def local_repo_init(working_dir: str) -> Repo:
+        repo = initialize_repo(working_dir=working_dir)
+        set_git_identity(repo=repo)
+        return repo
+    monkeypatch.setattr("tc_release.initialize_repo", local_repo_init)
     # Hope for no issues
     assert main([
         '--dry-run',
