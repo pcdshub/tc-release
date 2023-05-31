@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import shutil
 from pathlib import Path
@@ -10,22 +12,23 @@ from ..tc_release import initialize_repo, main, make_release
 
 
 @pytest.mark.parametrize(
-    "reponame",
+    "reponame,plcproj",
     [
-        'lcls-plc-kfe-vac',
-        'lcls-plc-lfe-motion',
-        'lcls-plc-tmo-optics',
-        'lcls-twincat-common-components',
-        'lcls-twincat-general',
-        'lcls-twincat-motion',
-        'lcls-twincat-physics',
-        'lcls-twincat-pmps',
-        'lcls-twincat-vacuum',
+        ('lcls-plc-kfe-vac', 'plc_kfe_vac'),
+        ('lcls-plc-lfe-motion', None),
+        ('lcls-plc-tmo-optics', None),
+        ('lcls-twincat-common-components', None),
+        ('lcls-twincat-general', None),
+        ('lcls-twincat-motion', None),
+        ('lcls-twincat-physics', None),
+        ('lcls-twincat-pmps', None),
+        ('lcls-twincat-vacuum', None),
     ],
 )
 def test_dry_run(
     monkeypatch: pytest.MonkeyPatch,
     reponame: str,
+    plcproj: str | None,
 ):
     """
     Test that the dry run works on a few repositories.
@@ -50,12 +53,16 @@ def test_dry_run(
         working_dir=working_dir,
         full_version_string=f'v{version}',
         repo_url=repo_url,
+        plcproj=plcproj,
         dry_run=True,
     )
     # Find our version string in the two places it belongs
     # It should be in a file with extension .plcproj embedded in the xml
-    plcproj = next(Path(working_dir).rglob('*.plcproj'))
-    with plcproj.open() as fd:
+    if plcproj is None:
+        plcproj_path = next(Path(working_dir).rglob('*.plcproj'))
+    else:
+        plcproj_path = next(Path(working_dir).rglob(f'{plcproj}.plcproj'))
+    with plcproj_path.open() as fd:
         assert f'<ProjectVersion>{version}</ProjectVersion>' in fd.read()
     # It should also be in a file named Global_Version.TcGVL with ST struct
     global_version = next(Path(working_dir).rglob('Global_Version.TcGVL'))
@@ -87,6 +94,7 @@ def test_dry_run_from_main(monkeypatch: pytest.MonkeyPatch):
         shutil.rmtree(full_workdir)
     # Hope for no issues
     assert main([
+        '--dry-run',
         'v888.888.888',
         url,
     ]) == 0
