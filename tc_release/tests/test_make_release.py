@@ -53,7 +53,7 @@ def test_dry_run(
         working_dir=working_dir,
         full_version_string=f'v{version}',
         repo_url=repo_url,
-        plcproj=plcproj,
+        select_plcproj=plcproj,
         dry_run=True,
     )
     # Find our version string in the two places it belongs
