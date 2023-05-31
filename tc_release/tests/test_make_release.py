@@ -110,7 +110,7 @@ def test_dry_run_from_main(monkeypatch: pytest.MonkeyPatch):
         repo = initialize_repo(working_dir=working_dir)
         set_git_identity(repo=repo)
         return repo
-    monkeypatch.setattr("tc_release.initialize_repo", local_repo_init)
+    monkeypatch.setattr("tc_release.tc_release.initialize_repo", local_repo_init)
     # Hope for no issues
     assert main([
         '--dry-run',
