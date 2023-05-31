@@ -12,6 +12,7 @@ import shutil
 import stat
 import subprocess
 import sys
+import types
 import typing
 import uuid
 
@@ -45,7 +46,17 @@ with open(template_file) as fd:
     GlobalVersion_TcGVL = fd.read()
 
 
-def parse_args(args: typing.Sequence[str] | None = None) -> argparse.Namespace:
+class TcReleaseArgs(types.SimpleNamespace):
+    version_string: str
+    repo_url: str
+    plcproj: str
+    deploy: bool
+    deploy_path: str
+    dry_run: bool
+    verbose: int
+
+
+def parse_args(args: typing.Sequence[str] | None = None) -> TcReleaseArgs:
     parser = argparse.ArgumentParser(
         description="Properly tags/version your TC project with GIT",
     )
@@ -105,7 +116,7 @@ def parse_args(args: typing.Sequence[str] | None = None) -> argparse.Namespace:
             "at the INFO level (20)."
         ),
     )
-    return parser.parse_args(args=args)
+    return parser.parse_args(args=args, namespace=TcReleaseArgs())
 
 
 def find(pattern: str, path: str) -> list[str]:
@@ -235,7 +246,7 @@ def deploy(repo_url: str, tag: str, directory: str, dry_run: bool):
                 subprocess.run('make')
 
 
-def make_deploy(args: argparse.Namespace):
+def make_deploy(args: TcReleaseArgs):
     if not args.deploy:
         return
     repo_url = args.repo_url
@@ -517,7 +528,7 @@ def make_release(
     return pushStatus
 
 
-def _main(args: argparse.Namespace, repo: Repo, working_dir: str):
+def _main(args: TcReleaseArgs, repo: Repo, working_dir: str):
     make_release(
         repo=repo,
         working_dir=working_dir,
@@ -529,12 +540,12 @@ def _main(args: argparse.Namespace, repo: Repo, working_dir: str):
     make_deploy(args)
 
 
-def configure_logging(args):
+def configure_logging(args: TcReleaseArgs):
     level = logging.INFO - args.verbose * 10
     logging.basicConfig(level=level, format='%(levelname)-8s %(message)s')
 
 
-def main(cli_args=None):
+def main(cli_args: TcReleaseArgs | None = None):
     return_value = 0
     args = parse_args(args=cli_args)
     configure_logging(args)
