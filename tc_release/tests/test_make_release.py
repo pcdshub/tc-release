@@ -14,7 +14,7 @@ from ..tc_release import initialize_repo, main, make_release
 @pytest.mark.parametrize(
     "reponame,plcproj",
     [
-        ('lcls-plc-kfe-vac', 'plc_kfe_vac'),
+        ('lcls-plc-lfe-vac', 'plc_lfe_vac'),
         ('lcls-plc-lfe-motion', None),
         ('lcls-plc-tmo-optics', None),
         ('lcls-twincat-common-components', None),
