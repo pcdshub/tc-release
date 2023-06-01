@@ -27,6 +27,7 @@ requirements:
 test:
   requires:
   - pytest
+  - requests
   imports:
   - tc_release
 
