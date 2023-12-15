@@ -231,15 +231,27 @@ def deploy(repo_url: str, tag: str, directory: str, dry_run: bool):
     # Clone the repo
     deploy_dir = os.path.join(directory, tag)
     logger.info(f"Deploying to {deploy_dir}")
-    if not dry_run:
-        Repo.clone_from(repo_url, deploy_dir, depth=1, branch=tag)
+    if os.path.exists(deploy_dir):
+        logger.warning(f"{deploy_dir} already exists, skipping clone")
+    else:
+        if dry_run:
+            logger.info("Dry-run: skip clone")
+        else:
+            logger.info(f"Cloning repo at {tag}...")
+            Repo.clone_from(repo_url, deploy_dir, depth=1, branch=tag)
 
     # Find the makefiles
-    if not dry_run:
+    if dry_run:
+        logger.info("Dry-run: skip finding makefiles")
+    else:
+        logger.info("Finding Makefiles...")
         make_dirs = find_makefiles(deploy_dir)
 
     # Make all the makefiles
-    if not dry_run:
+    if dry_run:
+        logger.info("Dry-run: skip make")
+    else:
+        logger.info("Running make commands")
         for make_dir in make_dirs:
             with pushd(make_dir):
                 subprocess.run("make")
