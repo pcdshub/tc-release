@@ -231,15 +231,27 @@ def deploy(repo_url: str, tag: str, directory: str, dry_run: bool):
     # Clone the repo
     deploy_dir = os.path.join(directory, tag)
     logger.info(f"Deploying to {deploy_dir}")
-    if not dry_run:
-        Repo.clone_from(repo_url, deploy_dir, depth=1, branch=tag)
+    if os.path.exists(deploy_dir):
+        logger.warning(f"{deploy_dir} already exists, skipping clone")
+    else:
+        if dry_run:
+            logger.info("Dry-run: skip clone")
+        else:
+            logger.info(f"Cloning repo at {tag}...")
+            Repo.clone_from(repo_url, deploy_dir, depth=1, branch=tag)
 
     # Find the makefiles
-    if not dry_run:
+    if dry_run:
+        logger.info("Dry-run: skip finding makefiles")
+    else:
+        logger.info("Finding Makefiles...")
         make_dirs = find_makefiles(deploy_dir)
 
     # Make all the makefiles
-    if not dry_run:
+    if dry_run:
+        logger.info("Dry-run: skip make")
+    else:
+        logger.info("Running make commands")
         for make_dir in make_dirs:
             with pushd(make_dir):
                 subprocess.run("make")
@@ -296,10 +308,7 @@ def initialize_repo(working_dir: str) -> Repo:
     This is done separately to simplify the cleanup. The repo object
     must be closed or else the working directory rmtree will fail.
     """
-    logger.info("Creating working directory: %s", working_dir)
-    logger.info(
-        "Initializing bare git repo, establishing remote, and checking out master"
-    )
+    logger.info("Creating and initializing working directory: %s", working_dir)
     return Repo.init(working_dir)
 
 
@@ -312,26 +321,28 @@ def make_release(
     dry_run: bool = False,
 ):
     """The core tc_release routine for tagging projects."""
-    # Create a temp directory, and clone the repo, and check out master
 
-    logger.info("Adding remote")
+    logger.info(f"Adding remote for {repo_url}")
     logger.debug("Working directory: %s, Repo: %s", working_dir, repo_url)
     origin = repo.create_remote("origin", str(repo_url))
 
     if not origin.exists():
         raise RuntimeError("Repo URL does not exist!")
 
-    origin.fetch()
+    logger.info("Fetching master branch and tags")
+    origin.fetch(["master:refs/remotes/origin/master", "refs/tags/*:refs/tags/*"])
+
+    logger.debug(f"existing tags are: {repo.tags}")
+    if full_version_string in (tag.name for tag in repo.tags):
+        logger.warning(f"Tag {full_version_string} already exists, skipping")
+        return
+    else:
+        logger.info(f"Tag {full_version_string} does not exist, continuing")
 
     repo.create_head("master", origin.refs.master)
 
     repo.heads.master.checkout()
-
     repo.heads.master.set_tracking_branch(origin.refs.master)
-
-    if full_version_string in (tag.name for tag in repo.tags):
-        logger.warning(f"Tag {full_version_string} already exists, skipping")
-        return
 
     # Check format of version_number
     projectVersion_pattern = re.compile(r"v([\d.]+)")
@@ -524,7 +535,7 @@ def make_release(
         pushStatus = None
         logger.info("Skipping push for dry-run")
     else:
-        pushStatus = origin.push(tags=True)
+        pushStatus = origin.push(full_version_string)
         logger.info("Push complete")
 
     return pushStatus
@@ -552,6 +563,9 @@ def main(cli_args: TcReleaseArgs | None = None):
     args = parse_args(args=cli_args)
     configure_logging(args)
     working_dir = os.path.join(os.getcwd(), dirname)
+    if os.path.exists(working_dir):
+        logger.error(f"Working dir {working_dir} already exists, exiting.")
+        return 1
     repo = initialize_repo(working_dir)
     try:
         _main(args=args, repo=repo, working_dir=working_dir)
