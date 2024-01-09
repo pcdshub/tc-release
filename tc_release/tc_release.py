@@ -427,7 +427,7 @@ def make_release(
     gvl_attrib = GlobalVersion_TcGVL_root.find(".//GVL").attrib
 
     try:
-        gvl_attrib["Id"] = str(uuid.uuid4())
+        gvl_attrib["Id"] = f"{{{uuid.uuid4()}}}"
     except KeyError:
         raise RuntimeError("Could not find Id attribute in GVL tag")
 
