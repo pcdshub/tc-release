@@ -81,7 +81,8 @@ def test_dry_run(
     with global_version.open() as fd:
         assert (
             f': ST_LibVersion := (iMajor := {major}, iMinor := {minor}, '
-            f"iBuild := {fix}, iRevision := 0, sVersion := '{version}');"
+            f"iBuild := {fix}, iRevision := 0, nFlags := 1, "
+            f"sVersion := '{version}');"
         ) in fd.read()
 
 
