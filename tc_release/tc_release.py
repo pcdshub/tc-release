@@ -384,10 +384,12 @@ def make_release(
     # company_tag = plcproj_root.find('.//Company', nsmap)
     # author_tag = plcproj_root.find('.//Author', nsmap)
     title_tag = plcproj_root.find(".//Title", nsmap)
+    released_tag = plcproj_root.find(".//Released", nsmap)
 
-    if None in (projectVersion_tag, title_tag):
+    if None in (projectVersion_tag, title_tag, released_tag):
         err = (
-            "Did not find a plc project version tag or a title tag! "
+            "Did not find at least one of the plc project version tag, "
+            "title tag, or released tag! "
             "Did you forgot to set the plc project version to 0.0.0 "
             "or select an appropriate project title in TwinCAT?"
         )
@@ -397,6 +399,7 @@ def make_release(
     # Adding version string to plcproj
 
     projectVersion_tag.text = version_string
+    released_tag.text = "true"
 
     # To make this verson number available in the PLC runtime,
     # we must add the Version/Global_Version.TcGVL to the project
@@ -455,6 +458,7 @@ def make_release(
         "stLibVersion_{title} : ST_LibVersion := "
         "(iMajor := {iMajor}, iMinor := {iMinor}, "
         "iBuild := {iBuild}, iRevision := {iRevision}, "
+        "nFlags := 1, "
         "sVersion := '{sVersion}');"
     )
     replacement_string = fmt.format(
