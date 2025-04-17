@@ -1,14 +1,14 @@
 # default group
-* @pcdshub/python-reviewers
+* @pcdshub/epics-reviewers @pcdshub/twincat-reviewers
 
 # language-specific group(s)
 ## PYTHON files
-*.py @pcdshub/python-reviewers
-*.pyi @pcdshub/python-reviewers
-*.pyc @pcdshub/python-reviewers
-*.pyw @pcdshub/python-reviewers
-*.pyx @pcdshub/python-reviewers
-*.pyd @pcdshub/python-reviewers
+*.py @pcdshub/epics-reviewers @pcdshub/twincat-reviewers @pcdshub/python-reviewers
+*.pyi @pcdshub/epics-reviewers @pcdshub/twincat-reviewers @pcdshub/python-reviewers
+*.pyc @pcdshub/epics-reviewers @pcdshub/twincat-reviewers @pcdshub/python-reviewers
+*.pyw @pcdshub/epics-reviewers @pcdshub/twincat-reviewers @pcdshub/python-reviewers
+*.pyx @pcdshub/epics-reviewers @pcdshub/twincat-reviewers @pcdshub/python-reviewers
+*.pyd @pcdshub/epics-reviewers @pcdshub/twincat-reviewers @pcdshub/python-reviewers
 
 # github folder holds administrative files
 .github/** @pcdshub/software-admin
